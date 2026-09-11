@@ -1,0 +1,8 @@
+node_modules/
+backend/db/dental.db
+backend/db/dental.db-*
+backend/uploads/
+.env
+.DS_Store
+desktop-app/dist/
+*.log

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meridian Dental — Modern Family & Cosmetic Dentistry</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar" data-header></header>
+
+<section class="hero">
+  <div class="container hero-grid">
+    <div>
+      <div class="eyebrow-plain">Islamabad's family dental clinic</div>
+      <h1>Dentistry that actually puts you at ease.</h1>
+      <p class="lead">From a routine cleaning to a full smile makeover, our team plans every visit around your comfort — clear pricing, gentle care, and appointments that start on time.</p>
+      <div class="hero-actions">
+        <a href="booking.html" class="btn btn-primary">Book an Appointment</a>
+        <a href="services.html" class="btn btn-outline">See Our Services</a>
+      </div>
+      <div class="hero-stats">
+        <div><div class="num">14+</div><div class="lbl">years in practice</div></div>
+        <div><div class="num">2</div><div class="lbl">resident dentists</div></div>
+        <div><div class="num">9,000+</div><div class="lbl">patients treated</div></div>
+      </div>
+    </div>
+    <div class="hero-art"></div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <h2>Care for every stage of your smile</h2>
+        <p>A short list of what we're asked for most — the full catalogue covers routine, restorative and cosmetic care.</p>
+      </div>
+      <a href="services.html" class="btn btn-outline">View all services</a>
+    </div>
+    <div class="grid-3" id="home-services">
+      <div class="card"><p>Loading services…</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section-alt">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <h2>Meet the dentists</h2>
+        <p>Two resident dentists, one shared standard: unhurried appointments and a plan you actually understand.</p>
+      </div>
+      <a href="dentists.html" class="btn btn-outline">All profiles</a>
+    </div>
+    <div class="grid-2" id="home-dentists">
+      <div class="doc-card"><div class="doc-body"><p>Loading team…</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <h2>How booking works</h2>
+        <p>Three steps from "I need a dentist" to a confirmed slot.</p>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="card"><span class="num">01</span><h3>Choose a service & dentist</h3><p>Pick what you need and who you'd like to see, or leave it to us.</p></div>
+      <div class="card"><span class="num">02</span><h3>Pick a time that works</h3><p>Select an open date and time — no phone tag required.</p></div>
+      <div class="card"><span class="num">03</span><h3>We confirm your visit</h3><p>Our front desk confirms by phone or WhatsApp before your appointment.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer data-footer></footer>
+
+<script src="common.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    renderHeader('home');
+    document.querySelector('.hero-art').innerHTML = toothSvg();
+
+    try {
+      const services = await api('/services/public');
+      document.getElementById('home-services').innerHTML = services.slice(0, 6).map(s => `
+        <div class="card">
+          <span class="num">Rs ${Number(s.price).toLocaleString()}</span>
+          <h3>${s.name}</h3>
+          <p>${s.description || ''}</p>
+          <a class="more" href="service.html?slug=${s.slug}">Learn more →</a>
+        </div>`).join('');
+    } catch (e) {
+      document.getElementById('home-services').innerHTML = '<div class="card"><p>Services are temporarily unavailable.</p></div>';
+    }
+
+    try {
+      const dentists = await api('/auth/dentists/public');
+      document.getElementById('home-dentists').innerHTML = dentists.map(d => `
+        <div class="doc-card">
+          <div class="doc-photo">🦷</div>
+          <div class="doc-body">
+            <h3>${d.name}</h3>
+            <div class="role">${d.specialty || 'General Dentistry'}</div>
+            <p>Booking directly for ${d.name.split(' ').slice(-1)[0]} is available on the appointment page.</p>
+          </div>
+        </div>`).join('');
+    } catch (e) {
+      document.getElementById('home-dentists').innerHTML = '<div class="doc-card"><div class="doc-body"><p>Team profiles are temporarily unavailable.</p></div></div>';
+    }
+  });
+</script>
+</body>
+</html>

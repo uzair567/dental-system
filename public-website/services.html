@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dental Services — Meridian Dental</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar" data-header></header>
+
+<div class="page-head">
+  <div class="container">
+    <div class="crumb"><a href="index.html">Home</a> / Services</div>
+    <h1>Dental services</h1>
+    <p>Routine, restorative and cosmetic care, priced clearly from the start. Every listing links through to what to expect at the appointment.</p>
+  </div>
+</div>
+
+<section>
+  <div class="container">
+    <div class="grid-3" id="services-list">
+      <div class="card"><p>Loading services…</p></div>
+    </div>
+  </div>
+</section>
+
+<footer data-footer></footer>
+<script src="common.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  renderHeader('services');
+  try {
+    const services = await api('/services/public');
+    document.getElementById('services-list').innerHTML = services.map(s => `
+      <div class="card">
+        <span class="num">Rs ${Number(s.price).toLocaleString()} · ${s.duration_minutes} min</span>
+        <h3>${s.name}</h3>
+        <p>${s.description || ''}</p>
+        <a class="more" href="service.html?slug=${s.slug}">Learn more →</a>
+      </div>`).join('');
+  } catch (e) {
+    document.getElementById('services-list').innerHTML = '<div class="card"><p>Services are temporarily unavailable. Please call the clinic.</p></div>';
+  }
+});
+</script>
+</body>
+</html>

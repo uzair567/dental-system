@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our Dentists — Meridian Dental</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar" data-header></header>
+
+<div class="page-head">
+  <div class="container">
+    <div class="crumb"><a href="index.html">Home</a> / Our Dentists</div>
+    <h1>Meet the team</h1>
+    <p>Two resident dentists, each with their own focus — book directly with whoever fits what you need.</p>
+  </div>
+</div>
+
+<section>
+  <div class="container">
+    <div class="grid-2" id="dentist-list">
+      <div class="doc-card"><div class="doc-body"><p>Loading team…</p></div></div>
+    </div>
+  </div>
+</section>
+
+<footer data-footer></footer>
+<script src="common.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  renderHeader('dentists');
+  try {
+    const dentists = await api('/auth/dentists/public');
+    document.getElementById('dentist-list').innerHTML = dentists.map(d => `
+      <div class="doc-card">
+        <div class="doc-photo" style="aspect-ratio:4/3;">🦷</div>
+        <div class="doc-body">
+          <h3>${d.name}</h3>
+          <div class="role">${d.specialty || 'General Dentistry'}</div>
+          <p>Book an appointment directly with ${d.name} through our online booking form.</p>
+          <a class="more" style="display:inline-block;margin-top:6px;" href="booking.html?dentist=${d.id}">Book with ${d.name.split(' ').slice(-1)[0]} →</a>
+        </div>
+      </div>`).join('');
+  } catch (e) {
+    document.getElementById('dentist-list').innerHTML = '<div class="doc-card"><div class="doc-body"><p>Team profiles are temporarily unavailable.</p></div></div>';
+  }
+});
+</script>
+</body>
+</html>

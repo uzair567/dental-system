@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Meridian Dental — Desktop</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="setup-screen">
+  <div class="setup-card">
+    <h1>Meridian Dental</h1>
+    <p class="helper" style="margin-bottom:20px;">Desktop app — works offline, syncs to the live server automatically when you're online.</p>
+    <div id="setup-err" class="err"></div>
+    <div class="field"><label>Live server URL</label><input type="text" id="su-server" placeholder="http://your-clinic-server.com or http://localhost:4000"></div>
+    <div class="field"><label>Staff email</label><input type="email" id="su-email"></div>
+    <div class="field"><label>Password</label><input type="password" id="su-password"></div>
+    <button class="btn btn-primary btn-block" id="su-connect-btn">Sign In & Connect</button>
+    <p class="helper" style="margin-top:14px;">Already signed in? You can also <a href="#" id="su-skip">work offline for now</a> and sign in later from Settings.</p>
+  </div>
+</div>
+
+<div id="app-shell">
+  <div class="topbar">
+    <div class="brand">🦷 Meridian Dental — Desktop</div>
+    <div class="status-bar">
+      <span id="online-indicator"><span class="dot offline"></span>Checking connection…</span>
+      <span class="pending-badge" id="pending-badge">0 pending</span>
+      <button class="btn btn-outline" id="sync-now-btn" style="padding:6px 12px;">Sync Now</button>
+      <button class="btn btn-outline" id="logout-btn" style="padding:6px 12px;">Sign out</button>
+    </div>
+  </div>
+
+  <div class="tabs-bar">
+    <button class="tab-btn active" data-tab="patients">Patients</button>
+    <button class="tab-btn" data-tab="leads">Leads</button>
+    <button class="tab-btn" data-tab="appointments">Appointments</button>
+    <button class="tab-btn" data-tab="sync">Sync Activity</button>
+  </div>
+
+  <div class="tab-pane active" data-pane="patients">
+    <div class="panel">
+      <div class="panel-head"><h2 class="mb-0">Patients (offline copy)</h2><button class="btn btn-primary" id="add-patient-btn">+ Add Patient</button></div>
+      <table><thead><tr><th>Code</th><th>Name</th><th>Phone</th><th>Email</th><th>Sync</th></tr></thead>
+      <tbody id="patients-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <div class="tab-pane" data-pane="leads">
+    <div class="panel">
+      <div class="panel-head"><h2 class="mb-0">Leads (offline copy)</h2><button class="btn btn-primary" id="add-lead-btn">+ Add Lead</button></div>
+      <table><thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Sync</th></tr></thead>
+      <tbody id="leads-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <div class="tab-pane" data-pane="appointments">
+    <div class="panel">
+      <div class="panel-head"><h2 class="mb-0">Appointments (offline copy)</h2><button class="btn btn-primary" id="add-appt-btn">+ Add Appointment</button></div>
+      <table><thead><tr><th>Date</th><th>Time</th><th>Patient ID</th><th>Status</th><th>Sync</th></tr></thead>
+      <tbody id="appts-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <div class="tab-pane" data-pane="sync">
+    <div class="panel">
+      <h2>How syncing works</h2>
+      <p style="font-size:.88rem;color:var(--muted);max-width:64ch;">
+        Everything you enter here is saved to this computer immediately, even with no internet connection.
+        Every 20 seconds — and whenever you press <b>Sync Now</b> — the app checks the live server. If it's
+        reachable, unsynced records are pushed up, and anything new from the website or the web dashboard is
+        pulled down, so this computer and the live server stay in agreement.
+      </p>
+      <div class="log-box" id="sync-log"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-backdrop"></div>
+<script src="app.js"></script>
+</body>
+</html>

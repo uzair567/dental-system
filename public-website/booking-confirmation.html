@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Booking Received — Meridian Dental</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar" data-header></header>
+
+<section style="padding-top:70px;">
+  <div class="container" style="max-width:560px;">
+    <div class="confirm-box">
+      <div class="confirm-icon">✓</div>
+      <h2>Appointment request received</h2>
+      <p id="c-message" style="color:var(--muted);">Our team will confirm your appointment shortly.</p>
+      <div class="confirm-detail" id="c-detail"></div>
+      <a href="index.html" class="btn btn-outline" style="margin-top:26px;">Back to home</a>
+    </div>
+  </div>
+</section>
+
+<footer data-footer></footer>
+<script src="common.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  renderHeader('');
+  const raw = sessionStorage.getItem('lastBooking');
+  if (!raw) {
+    document.getElementById('c-message').textContent = 'No recent booking found — please use the booking form.';
+    return;
+  }
+  const b = JSON.parse(raw);
+  document.getElementById('c-message').textContent = b.message;
+  document.getElementById('c-detail').innerHTML = `
+    <div><span>Name</span><span>${b.name}</span></div>
+    <div><span>Phone</span><span>${b.phone}</span></div>
+    <div><span>Service</span><span>${b.service || '—'}</span></div>
+    <div><span>Requested date</span><span>${b.date}</span></div>
+    <div><span>Requested time</span><span>${b.time}</span></div>
+    <div><span>Status</span><span style="text-transform:capitalize;">${b.status}</span></div>`;
+});
+</script>
+</body>
+</html>

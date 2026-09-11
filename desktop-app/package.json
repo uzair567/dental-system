@@ -1,0 +1,13 @@
+{
+  "name": "dental-system-desktop",
+  "version": "1.0.0",
+  "description": "Dentist Management System — offline-capable desktop app (Electron) that syncs to the live server",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^32.0.0"
+  }
+}

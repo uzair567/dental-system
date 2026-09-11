@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Service — Meridian Dental</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar" data-header></header>
+
+<div class="page-head">
+  <div class="container">
+    <div class="crumb"><a href="index.html">Home</a> / <a href="services.html">Services</a> / <span id="crumb-name">Service</span></div>
+    <h1 id="svc-name">Loading…</h1>
+    <p id="svc-desc"></p>
+  </div>
+</div>
+
+<section>
+  <div class="container grid-2">
+    <div>
+      <h2>What's included</h2>
+      <p id="svc-body">This treatment is carried out by one of our resident dentists in a single visit unless noted otherwise. Your dentist will confirm exact details and any preparation needed when you book.</p>
+      <div class="card" style="margin-top:24px;">
+        <h3>Good to know before you book</h3>
+        <p>Let us know about any allergies, medications or previous dental work related to this treatment — your dentist will review this at check-in.</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Appointment details</h3>
+      <div class="confirm-detail">
+        <div><span>Typical duration</span><span id="svc-duration">—</span></div>
+        <div><span>Starting price</span><span id="svc-price">—</span></div>
+      </div>
+      <a href="booking.html" id="svc-book-link" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:20px;">Book this service</a>
+    </div>
+  </div>
+</section>
+
+<footer data-footer></footer>
+<script src="common.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  renderHeader('services');
+  const slug = new URLSearchParams(location.search).get('slug');
+  if (!slug) { document.getElementById('svc-name').textContent = 'Service not specified'; return; }
+  try {
+    const s = await api('/services/public/' + slug);
+    document.title = s.name + ' — Meridian Dental';
+    document.getElementById('crumb-name').textContent = s.name;
+    document.getElementById('svc-name').textContent = s.name;
+    document.getElementById('svc-desc').textContent = s.description || '';
+    document.getElementById('svc-duration').textContent = s.duration_minutes + ' minutes';
+    document.getElementById('svc-price').textContent = 'Rs ' + Number(s.price).toLocaleString();
+    document.getElementById('svc-book-link').href = 'booking.html?service=' + s.id;
+  } catch (e) {
+    document.getElementById('svc-name').textContent = 'Service not found';
+    document.getElementById('svc-desc').textContent = 'This service could not be found — please check the services page.';
+  }
+});
+</script>
+</body>
+</html>
