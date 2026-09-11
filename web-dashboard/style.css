@@ -85,6 +85,8 @@ th{text-align:left;color:var(--muted);font-weight:600;padding:9px 10px;border-bo
 td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:middle;}
 tr:last-child td{border-bottom:none;}
 tr.clickable:hover{background:#f7f8f5;cursor:pointer;}
+.clickable{cursor:pointer;transition:background .1s;}
+.clickable:hover{background:#f7f8f5;}
 .empty-row td{text-align:center;color:var(--muted);padding:26px;}
 
 /* ---------- Buttons ---------- */

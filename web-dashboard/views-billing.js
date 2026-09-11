@@ -72,9 +72,20 @@ function openInvoiceModal(patientId, onSaved) {
 
 async function openInvoiceDetail(invoiceId, onSaved) {
   const inv = await api('/billing/invoices/' + invoiceId);
+  const outstanding = inv.total - inv.paid_amount;
   openModal(`
-    <div class="modal-head"><h2 class="mb-0">${esc(inv.invoice_number)}</h2><button onclick="closeModal()">&times;</button></div>
+    <div class="modal-head">
+      <h2 class="mb-0">${esc(inv.invoice_number)}</h2>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-outline btn-sm" id="inv-print-btn">🖨 Print Invoice</button>
+        <button onclick="closeModal()" style="background:none;border:none;font-size:1.2rem;color:var(--muted);">&times;</button>
+      </div>
+    </div>
     <p class="small muted">${esc(inv.patient_name || '')} · ${esc(inv.patient_phone || '')}</p>
+    <div class="summary-box" style="background:#f7f8f5;border-radius:6px;padding:12px 14px;margin-bottom:14px;font-size:.85rem;">
+      <b>${esc(inv.patient_name || 'Patient')}</b> owes <b>${fmtMoney(outstanding)}</b> on this invoice
+      (${fmtMoney(inv.total)} total, ${fmtMoney(inv.paid_amount)} already paid) — status: ${pill(inv.status)}
+    </div>
     <table style="margin:14px 0;"><thead><tr><th>Description</th><th class="right">Amount</th></tr></thead>
     <tbody>${inv.items.map(it => `<tr><td>${esc(it.description)}</td><td class="right">${fmtMoney(it.amount)}</td></tr>`).join('')}</tbody></table>
     <div class="right small" style="line-height:2;">
@@ -82,7 +93,7 @@ async function openInvoiceDetail(invoiceId, onSaved) {
       <div>Discount: ${fmtMoney(inv.discount)}</div>
       <div><b>Total: ${fmtMoney(inv.total)}</b></div>
       <div>Paid: ${fmtMoney(inv.paid_amount)}</div>
-      <div style="color:var(--red);">Outstanding: ${fmtMoney(inv.total - inv.paid_amount)}</div>
+      <div style="color:var(--red);">Outstanding: ${fmtMoney(outstanding)}</div>
     </div>
     <hr class="divider">
     <div id="pay-msg"></div>
@@ -98,6 +109,8 @@ async function openInvoiceDetail(invoiceId, onSaved) {
     ${inv.payments.length ? inv.payments.map(p => `<div class="small" style="border-bottom:1px solid var(--line);padding:6px 0;display:flex;justify-content:space-between;"><span>${fmtMoney(p.amount)} · ${esc(p.method)}</span><span class="muted">${fmtDateTime(p.paid_at)}</span></div>`).join('') : '<p class="small muted">No payments recorded yet.</p>'}
   `, true);
 
+  document.getElementById('inv-print-btn').addEventListener('click', () => printInvoiceDocument(inv));
+
   document.getElementById('pay-submit-btn')?.addEventListener('click', async () => {
     const amount = Number(document.getElementById('pay-amount').value || 0);
     const method = document.getElementById('pay-method').value;
@@ -107,4 +120,36 @@ async function openInvoiceDetail(invoiceId, onSaved) {
       closeModal(); onSaved && onSaved();
     } catch (err) { document.getElementById('pay-msg').innerHTML = `<div class="form-msg err">${esc(err.message)}</div>`; }
   });
+}
+
+// ---------------- Formal printable invoice ----------------
+function printInvoiceDocument(inv) {
+  const outstanding = inv.total - inv.paid_amount;
+  const statusClass = inv.status === 'paid' ? 'status-paid' : inv.status === 'partial' ? 'status-partial' : 'status-unpaid';
+  const body = `
+    <div class="party">
+      <b>Bill to: ${esc(inv.patient_name || 'Patient')}</b>
+      ${inv.patient_phone ? esc(inv.patient_phone) : ''}
+      <div style="margin-top:6px;">Invoice #: <b>${esc(inv.invoice_number)}</b></div>
+      <span class="status-stamp ${statusClass}">${esc((inv.status || '').toUpperCase())}</span>
+    </div>
+    <table>
+      <thead><tr><th>Description</th><th class="right">Amount</th></tr></thead>
+      <tbody>${inv.items.map(it => `<tr><td>${esc(it.description)}</td><td class="right">${fmtMoney(it.amount)}</td></tr>`).join('')}</tbody>
+    </table>
+    <div class="totals">
+      <div><span>Subtotal</span><span>${fmtMoney(inv.subtotal)}</span></div>
+      <div><span>Discount</span><span>-${fmtMoney(inv.discount)}</span></div>
+      <div class="grand"><span>Total</span><span>${fmtMoney(inv.total)}</span></div>
+      <div><span>Paid</span><span>${fmtMoney(inv.paid_amount)}</span></div>
+      <div><span><b>Outstanding</b></span><span><b>${fmtMoney(outstanding)}</b></span></div>
+    </div>
+    ${inv.payments && inv.payments.length ? `
+    <h3 style="margin-top:30px;font-size:.95rem;">Payment History</h3>
+    <table>
+      <thead><tr><th>Date</th><th>Method</th><th class="right">Amount</th></tr></thead>
+      <tbody>${inv.payments.map(p => `<tr><td>${fmtDateTime(p.paid_at)}</td><td style="text-transform:capitalize;">${esc(p.method)}</td><td class="right">${fmtMoney(p.amount)}</td></tr>`).join('')}</tbody>
+    </table>` : ''}
+  `;
+  printDocument('Invoice ' + inv.invoice_number, body);
 }

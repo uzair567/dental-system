@@ -155,11 +155,12 @@ async function openPatientProfile(patientId) {
     <div class="tab-pane" data-pane="treatments">
       <div class="panel">
         ${data.treatments.length ? data.treatments.map(t => `
-          <div style="border-bottom:1px solid var(--line);padding:12px 0;">
+          <div class="clickable" data-tid="${t.id}" style="border-bottom:1px solid var(--line);padding:12px 0;border-radius:4px;">
             <div class="flex-between"><b>${fmtDate(t.created_at)}</b><span class="small muted">${esc(t.dentist_name || '')}</span></div>
             <p class="small" style="margin:6px 0;"><b>Diagnosis:</b> ${esc(t.diagnosis || '—')}</p>
             <p class="small" style="margin:6px 0;"><b>Treatment:</b> ${esc(t.treatment_performed || '—')}</p>
             <p class="small muted" style="margin:6px 0;">Cost: ${fmtMoney(t.cost)} ${t.follow_up_date ? '· Follow-up: ' + fmtDate(t.follow_up_date) : ''}</p>
+            <p class="small" style="margin:6px 0;color:var(--pine);">View full details →</p>
           </div>`).join('') : '<p class="muted">No treatment records yet.</p>'}
       </div>
     </div>
@@ -218,6 +219,7 @@ async function openPatientProfile(patientId) {
   main.querySelector('#pp-new-rx-btn')?.addEventListener('click', () => openPrescriptionModal(patientId, () => openPatientProfile(patientId)));
   main.querySelector('#pp-new-invoice-btn')?.addEventListener('click', () => openInvoiceModal(patientId, () => openPatientProfile(patientId)));
   main.querySelectorAll('[data-inv]').forEach(tr => tr.addEventListener('click', () => openInvoiceDetail(tr.dataset.inv, () => openPatientProfile(patientId))));
+  main.querySelectorAll('[data-tid]').forEach(row => row.addEventListener('click', () => openTreatmentDetailModal(row.dataset.tid, p)));
   main.querySelector('#pp-upload-input')?.addEventListener('change', async (e) => {
     const file = e.target.files[0]; if (!file) return;
     const fd = new FormData(); fd.append('file', file); fd.append('file_type', 'other');

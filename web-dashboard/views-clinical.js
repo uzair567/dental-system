@@ -119,3 +119,63 @@ function openPrescriptionModal(patientId, onSaved) {
     } catch (err) { document.getElementById('rx-msg').innerHTML = `<div class="form-msg err">${esc(err.message)}</div>`; }
   });
 }
+
+// ---------------- Treatment record detail (clickable from patient profile) ----------------
+async function openTreatmentDetailModal(treatmentId, patient) {
+  const t = await api('/treatments/' + treatmentId);
+  const teethLine = t.teeth && t.teeth.length
+    ? t.teeth.map(tt => `#${tt.tooth_number} (${tt.condition.replace('_', ' ')})`).join(', ')
+    : 'None tagged';
+
+  openModal(`
+    <div class="modal-head">
+      <h2 class="mb-0">Treatment Record</h2>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-outline btn-sm" id="tx-print-btn">🖨 Print</button>
+        <button onclick="closeModal()" style="background:none;border:none;font-size:1.2rem;color:var(--muted);">&times;</button>
+      </div>
+    </div>
+    <div class="summary-box" style="background:#f7f8f5;border-radius:6px;padding:12px 14px;margin-bottom:16px;font-size:.85rem;">
+      <b>${fmtDate(t.created_at)}</b> — ${esc(t.diagnosis || 'No diagnosis recorded')} treated with
+      <b>${esc(t.treatment_performed || 'no treatment noted')}</b>, cost ${fmtMoney(t.cost)}${t.dentist_name ? ' by ' + esc(t.dentist_name) : ''}.
+    </div>
+    <div class="field-row">
+      <div><p class="small muted" style="margin-bottom:2px;">Complaint</p><p class="small">${esc(t.complaint || '—')}</p></div>
+      <div><p class="small muted" style="margin-bottom:2px;">Diagnosis</p><p class="small">${esc(t.diagnosis || '—')}</p></div>
+    </div>
+    <div class="field-row">
+      <div><p class="small muted" style="margin-bottom:2px;">Treatment performed</p><p class="small">${esc(t.treatment_performed || '—')}</p></div>
+      <div><p class="small muted" style="margin-bottom:2px;">Treatment plan</p><p class="small">${esc(t.treatment_plan || '—')}</p></div>
+    </div>
+    <div class="field-row">
+      <div><p class="small muted" style="margin-bottom:2px;">Cost</p><p class="small">${fmtMoney(t.cost)}</p></div>
+      <div><p class="small muted" style="margin-bottom:2px;">Follow-up date</p><p class="small">${t.follow_up_date ? fmtDate(t.follow_up_date) : '—'}</p></div>
+    </div>
+    <div><p class="small muted" style="margin-bottom:2px;">Teeth involved</p><p class="small">${esc(teethLine)}</p></div>
+    <div style="margin-top:10px;"><p class="small muted" style="margin-bottom:2px;">Notes</p><p class="small">${esc(t.notes || 'No additional notes.')}</p></div>
+  `, true);
+
+  document.getElementById('tx-print-btn').addEventListener('click', () => {
+    const body = `
+      <div class="party">
+        <b>${esc(patient?.name || 'Patient')}</b>
+        ${patient?.phone ? esc(patient.phone) : ''}
+        <div style="margin-top:6px;">Visit date: <b>${fmtDate(t.created_at)}</b></div>
+      </div>
+      <div class="summary-box">${esc(t.diagnosis || 'No diagnosis recorded')} — treated with <b>${esc(t.treatment_performed || 'N/A')}</b>, cost ${fmtMoney(t.cost)}${t.dentist_name ? ' · Dentist: ' + esc(t.dentist_name) : ''}</div>
+      <table>
+        <tbody>
+          <tr><td><b>Complaint</b></td><td>${esc(t.complaint || '—')}</td></tr>
+          <tr><td><b>Diagnosis</b></td><td>${esc(t.diagnosis || '—')}</td></tr>
+          <tr><td><b>Treatment performed</b></td><td>${esc(t.treatment_performed || '—')}</td></tr>
+          <tr><td><b>Treatment plan</b></td><td>${esc(t.treatment_plan || '—')}</td></tr>
+          <tr><td><b>Teeth involved</b></td><td>${esc(teethLine)}</td></tr>
+          <tr><td><b>Follow-up date</b></td><td>${t.follow_up_date ? fmtDate(t.follow_up_date) : '—'}</td></tr>
+          <tr><td><b>Notes</b></td><td>${esc(t.notes || '—')}</td></tr>
+          <tr><td><b>Cost</b></td><td>${fmtMoney(t.cost)}</td></tr>
+        </tbody>
+      </table>
+    `;
+    printDocument('Treatment Record', body);
+  });
+}
