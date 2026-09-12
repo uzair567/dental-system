@@ -7,11 +7,10 @@ A real, working system with three parts that share one backend:
 2. **Admin/staff dashboard** — patients, leads/CRM, appointments, treatment records + dental
    chart, prescriptions, billing/invoices, doctors & staff, services, website messages inbox,
    reports, and an activity log.
-3. **Desktop app (Electron)** — the **full dashboard, offline**. It runs its own local copy of
-   the backend (a local SQLite database on that computer) so staff get every module — patients,
-   leads, appointments, treatments, dental chart, prescriptions, billing, doctors & staff,
-   services, reports — even with no internet. When online, it syncs automatically with the live
-   server in the background (and can sync on demand).
+3. **Desktop app (Electron)** — lets staff enter patients, leads, and appointments **offline**
+   on a clinic computer. Everything is saved locally first; when the internet is back, it syncs
+   automatically to the live server (and pulls down anything created on the website or the web
+   dashboard).
 
 Everything runs on a real backend: Node.js + Express + SQLite, with JWT-based login and
 role-based permissions (Super Admin, Dentist, Receptionist, Staff).
@@ -47,7 +46,7 @@ To deploy this for real, put it on a small server or VPS with a persistent disk 
 `db/dental.db` and the `uploads/` folder), put it behind HTTPS, and set a strong `JWT_SECRET`
 environment variable (see `backend/.env.example`... create one — `JWT_SECRET=<random-string>`).
 
-## 2. Desktop app (full dashboard, offline-capable)
+## 2. Desktop app (offline-capable)
 
 ```bash
 cd desktop-app
@@ -55,27 +54,22 @@ npm install
 npm start
 ```
 
-`npm install` also compiles the local database engine for Electron automatically (via a
-`postinstall` step) — this can take a minute the first time.
+On first launch it asks for:
+- **Live server URL** — e.g. `http://localhost:4000` while testing, or your real server's
+  address/domain once deployed.
+- **Staff email & password** — the same accounts as the dashboard.
 
-The app opens showing the **exact same dashboard** as the live site — logged in against a
-**local database on this computer** (seeded with the same demo accounts as the backend, see
-above). Staff can use every module — patients, leads, appointments, treatments, dental chart,
-prescriptions, billing, doctors & staff, services, reports — completely offline, with nothing
-missing.
+From there, staff can add patients, leads, and appointments even with no internet — they're
+saved to a local file on that computer (`app.getPath('userData')/offline-data`). Every 20
+seconds, and whenever "Sync Now" is pressed, the app:
 
-A small floating bar in the top-right corner shows sync status:
-- **"Not connected"** → click it once to enter your live server URL and staff login. This only
-  needs to be done once per computer.
-- Once connected, it shows **Online/Offline** and a **pending** count, with a **Sync Now**
-  button. Every 20 seconds (and on demand), it:
-  1. Pushes anything changed locally since the last sync.
-  2. Pulls anything changed on the live server (website bookings, changes from other staff, etc.)
-     into this computer's local database.
+1. Checks whether the live server is reachable.
+2. **Pushes** anything entered locally that hasn't been synced yet.
+3. **Pulls** anything new from the server (bookings from the website, edits from the web
+   dashboard, etc.) into the local copy.
 
 Records keep their own ID from the moment they're created offline, so there's no
-duplicate-record problem when they reach the server — the sync endpoint just upserts by ID,
-last-write-wins on whichever copy is newer.
+duplicate-record problem when they reach the server — the sync endpoint just upserts by ID.
 
 To package the desktop app into an installer (.exe / .dmg / .AppImage) for staff computers,
 add [`electron-builder`](https://www.electron.build/) and run it against this folder — it
@@ -84,20 +78,13 @@ wasn't included here to keep the download light, but the app itself is ready to 
 ## 3. Project structure
 
 ```
-backend/                  Express API + SQLite database + file uploads (the live server)
-  db/schema.sql            Full data model (patients, appointments, treatments, dental chart,
-                            prescriptions, invoices/payments, leads, messages, activity log)
-  routes/                  One file per module (patients, appointments, billing, sync, etc.)
-public-website/           Static site consuming the public API endpoints
-web-dashboard/            Staff dashboard (vanilla JS, no build step) — used both by the live
-                          backend AND loaded locally by the desktop app, so the UI is identical
-desktop-app/              Electron app
-  local-server/            A second copy of the backend's routes, running against a LOCAL
-                            SQLite database on the staff computer — this is what makes full
-                            offline use possible
-  sync-engine.js           Talks to the live server's /api/sync/push and /api/sync/pull to
-                            keep the local database and the live database in agreement
-  main.js / preload.js     Electron wiring + the floating sync status bar
+backend/            Express API + SQLite database + file uploads
+  db/schema.sql      Full data model (patients, appointments, treatments, dental chart,
+                      prescriptions, invoices/payments, leads, messages, activity log, sync log)
+  routes/            One file per module (patients, appointments, billing, sync, etc.)
+public-website/      Static site consuming the public API endpoints
+web-dashboard/       Staff dashboard (vanilla JS, no build step) consuming the authenticated API
+desktop-app/         Electron app: local offline store + sync engine + its own UI
 ```
 
 ## 4. What's implemented vs. what's stubbed

@@ -4,10 +4,20 @@
   "description": "Dentist Management System — offline-capable desktop app (Electron) that syncs to the live server",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "postinstall": "electron-rebuild -f -w better-sqlite3"
   },
-  "dependencies": {},
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^11.10.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.3.0",
+    "uuid": "^9.0.1"
+  },
   "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
     "electron": "^32.0.0"
   }
 }

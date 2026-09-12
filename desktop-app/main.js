@@ -1,17 +1,18 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { LocalStore, TABLES } = require('./store');
-const { isOnline, login, syncNow } = require('./sync');
+const { createLocalApp } = require('./local-server/app');
+const syncEngine = require('./sync-engine');
 
 let mainWindow;
-let store;
+let localDb;
 let configPath;
 let syncInterval;
+const LOCAL_PORT = 4321;
 
 function loadConfig() {
   if (!fs.existsSync(configPath)) {
-    return { serverUrl: '', authToken: null, userName: null, userRole: null };
+    return { remoteUrl: '', remoteEmail: '', remoteToken: null, deviceId: require('crypto').randomUUID(), lastSyncAt: null };
   }
   return JSON.parse(fs.readFileSync(configPath, 'utf8'));
 }
@@ -23,30 +24,38 @@ function saveConfig(patch) {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1180, height: 780, minWidth: 920, minHeight: 600,
+    width: 1280, height: 820, minWidth: 960, minHeight: 640,
     title: 'Meridian Dental — Desktop (Offline-Capable)',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
   });
-  mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  mainWindow.loadURL(`http://localhost:${LOCAL_PORT}/`);
 }
 
 app.whenReady().then(() => {
-  const dataDir = path.join(app.getPath('userData'), 'offline-data');
-  store = new LocalStore(dataDir);
-  configPath = path.join(app.getPath('userData'), 'config.json');
+  const userData = app.getPath('userData');
+  const dbPath = path.join(userData, 'local.db');
+  const uploadsPath = path.join(userData, 'uploads');
+  const webDashboardPath = path.join(__dirname, '..', 'web-dashboard');
+  configPath = path.join(userData, 'sync-config.json');
 
-  createWindow();
+  const { app: localExpressApp, db } = createLocalApp({ dbPath, uploadsPath, webDashboardPath });
+  localDb = db;
+  localExpressApp.listen(LOCAL_PORT, '127.0.0.1', () => {
+    console.log(`Local embedded server running on http://localhost:${LOCAL_PORT}`);
+    createWindow();
+  });
 
-  // Background sync loop — every 20s, silently sync if online & signed in.
+  // Background sync loop — every 20s, silently sync if a remote server + token are configured.
   syncInterval = setInterval(async () => {
     const cfg = loadConfig();
-    if (!cfg.serverUrl || !cfg.authToken) return;
+    if (!cfg.remoteUrl || !cfg.remoteToken) return;
     try {
-      const result = await syncNow(store, cfg.serverUrl, cfg.authToken, (msg) => {
+      const result = await syncEngine.syncNow(localDb, cfg.remoteUrl, cfg.remoteToken, cfg, (msg) => {
         mainWindow?.webContents.send('sync:log', msg);
       });
+      if (result.ok && result.newLastSyncAt) saveConfig({ lastSyncAt: result.newLastSyncAt });
       mainWindow?.webContents.send('sync:status', { ...result, at: new Date().toISOString() });
-    } catch (e) { /* swallow — will retry next tick */ }
+    } catch (e) { mainWindow?.webContents.send('sync:log', 'Sync error: ' + e.message); }
   }, 20000);
 
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
@@ -54,42 +63,45 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => { clearInterval(syncInterval); if (process.platform !== 'darwin') app.quit(); });
 
-// ---------------- IPC: config ----------------
-ipcMain.handle('config:get', () => loadConfig());
-ipcMain.handle('config:setServerUrl', (e, serverUrl) => saveConfig({ serverUrl }));
-ipcMain.handle('config:login', async (e, { serverUrl, email, password }) => {
-  const res = await login(serverUrl, email, password);
-  saveConfig({ serverUrl, authToken: res.token, userName: res.user.name, userRole: res.user.role });
-  return res.user;
-});
-ipcMain.handle('config:logout', () => saveConfig({ authToken: null, userName: null, userRole: null }));
-ipcMain.handle('config:isOnline', async () => {
+// ---------------- IPC: sync configuration ----------------
+ipcMain.handle('syncconfig:get', () => {
   const cfg = loadConfig();
-  return isOnline(cfg.serverUrl);
+  return { remoteUrl: cfg.remoteUrl, remoteEmail: cfg.remoteEmail, connected: !!cfg.remoteToken };
 });
 
-// ---------------- IPC: local data CRUD ----------------
-ipcMain.handle('data:list', (e, table) => {
-  if (!TABLES.includes(table)) throw new Error('Unknown table');
-  return store.list(table).sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
-});
-ipcMain.handle('data:insert', (e, { table, record }) => {
-  if (!TABLES.includes(table)) throw new Error('Unknown table');
-  return store.insert(table, record);
-});
-ipcMain.handle('data:update', (e, { table, id, patch }) => {
-  if (!TABLES.includes(table)) throw new Error('Unknown table');
-  return store.update(table, id, patch);
+ipcMain.handle('syncconfig:connect', async (e, { remoteUrl, email, password }) => {
+  const res = await syncEngine.login(remoteUrl, email, password);
+  saveConfig({ remoteUrl, remoteEmail: email, remoteToken: res.token });
+  return { ok: true, user: res.user };
 });
 
-// ---------------- IPC: manual sync trigger ----------------
+ipcMain.handle('syncconfig:disconnect', () => {
+  saveConfig({ remoteUrl: '', remoteEmail: '', remoteToken: null, lastSyncAt: null });
+  return { ok: true };
+});
+
+// ---------------- IPC: manual sync + status ----------------
 ipcMain.handle('sync:now', async () => {
   const cfg = loadConfig();
   const logs = [];
-  const result = await syncNow(store, cfg.serverUrl, cfg.authToken, (msg) => logs.push(msg));
+  const result = await syncEngine.syncNow(localDb, cfg.remoteUrl, cfg.remoteToken, cfg, (msg) => logs.push(msg));
+  if (result.ok && result.newLastSyncAt) saveConfig({ lastSyncAt: result.newLastSyncAt });
   return { ...result, logs };
 });
 
+ipcMain.handle('sync:isOnline', async () => {
+  const cfg = loadConfig();
+  return cfg.remoteUrl ? syncEngine.isOnline(cfg.remoteUrl) : false;
+});
+
 ipcMain.handle('sync:pendingCount', () => {
-  return TABLES.reduce((sum, t) => sum + store.unsynced(t).length, 0);
+  const cfg = loadConfig();
+  const since = cfg.lastSyncAt || '1970-01-01T00:00:00.000Z';
+  let count = 0;
+  for (const [table, spec] of Object.entries(syncEngine.SYNCABLE)) {
+    try {
+      count += localDb.prepare(`SELECT COUNT(*) c FROM ${table} WHERE ${spec.timeCol} > ?`).get(since).c;
+    } catch (e) { /* table might not exist yet on a brand-new db — ignore */ }
+  }
+  return count;
 });

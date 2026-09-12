@@ -85,7 +85,6 @@ let currentView = 'overview';
 async function go(view) {
   currentView = view;
   renderSidebar(view);
-  closeMobileSidebar();
   const main = document.getElementById('main-content');
   main.innerHTML = '<p class="muted">Loading…</p>';
   try {
@@ -94,21 +93,6 @@ async function go(view) {
     main.innerHTML = `<div class="panel"><p style="color:var(--red);">${esc(err.message)}</p></div>`;
   }
 }
-
-// ---------------- Mobile sidebar toggle ----------------
-function openMobileSidebar() {
-  document.getElementById('sidebar').classList.add('mobile-open');
-  document.getElementById('sidebar-backdrop').classList.add('open');
-}
-function closeMobileSidebar() {
-  document.getElementById('sidebar').classList.remove('mobile-open');
-  document.getElementById('sidebar-backdrop').classList.remove('open');
-}
-document.getElementById('mobile-menu-btn').addEventListener('click', () => {
-  const sidebar = document.getElementById('sidebar');
-  sidebar.classList.contains('mobile-open') ? closeMobileSidebar() : openMobileSidebar();
-});
-document.getElementById('sidebar-backdrop').addEventListener('click', closeMobileSidebar);
 
 async function boot() {
   document.getElementById('login-screen').style.display = 'none';
