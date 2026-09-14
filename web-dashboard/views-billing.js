@@ -44,9 +44,9 @@ function openInvoiceModal(patientId, onSaved) {
       <div id="iv-items">${items.map((it, i) => row(i, it)).join('')}</div>
       <button type="button" class="btn btn-outline btn-sm" id="iv-add-item">+ Add line item</button>
       <div class="field" style="margin-top:14px;"><label>Discount</label><input type="number" name="discount" value="0" min="0"></div>
-      <div class="field" style="display:flex;align-items:center;gap:8px;margin-top:2px;">
-        <input type="checkbox" id="iv-mark-paid" style="width:auto;">
-        <label for="iv-mark-paid" style="margin:0;font-weight:600;cursor:pointer;">Mark as paid now</label>
+      <div class="field" style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px 14px;background:#f7f8f5;border:1px solid var(--line);border-radius:6px;">
+        <input type="checkbox" id="iv-mark-paid" style="width:auto;transform:scale(1.15);">
+        <label for="iv-mark-paid" style="margin:0;font-weight:600;cursor:pointer;">💰 Mark as paid now — skip recording payment separately</label>
       </div>
       <div class="field" id="iv-paid-method-field" style="display:none;">
         <label>Payment method</label>

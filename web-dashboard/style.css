@@ -33,6 +33,16 @@ h1,h2,h3{font-family:var(--serif);font-weight:500;margin:0 0 6px;color:var(--pin
 }
 .field textarea{resize:vertical;min-height:80px;}
 .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--pine);outline-offset:1px;}
+/* Line-item rows in modals (invoice/prescription items) use bare inputs without a .field
+   wrapper — give them the same consistent look. */
+.modal input[type=text],.modal input[type=number],.modal input[type=email],
+.modal input[type=tel],.modal input[type=date],.modal input[type=time],
+.modal select,.modal textarea{
+  padding:10px 12px;border:1px solid var(--line);border-radius:5px;font-size:.9rem;font-family:var(--sans);background:#fff;color:var(--ink);
+}
+.modal input[type=text]:focus,.modal input[type=number]:focus,.modal input[type=email]:focus,
+.modal input[type=tel]:focus,.modal input[type=date]:focus,.modal input[type=time]:focus,
+.modal select:focus,.modal textarea:focus{outline:2px solid var(--pine);outline-offset:1px;}
 .demo-creds{background:#f4f1e8;border:1px solid #e4dcc4;border-radius:5px;padding:12px 14px;font-size:.78rem;color:#6b5f3d;margin-top:18px;line-height:1.6;}
 
 /* ---------- App shell ---------- */
