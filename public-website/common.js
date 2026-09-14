@@ -38,10 +38,25 @@ function renderHeader(active) {
         <nav class="mainnav">${navHtml}</nav>
         <div class="topbar-cta">
           <span class="phone-link">${CLINIC.phone}</span>
+          <button class="menu-btn" id="mobile-nav-toggle" aria-label="Menu">☰</button>
           <a href="booking.html" class="btn btn-primary">Book Appointment</a>
         </div>
-      </div>`;
+      </div>
+      <nav class="mobile-nav" id="mobile-nav">${navHtml}</nav>`;
   });
+
+  const toggle = document.getElementById('mobile-nav-toggle');
+  const mobileNav = document.getElementById('mobile-nav');
+  if (toggle && mobileNav) {
+    toggle.addEventListener('click', () => {
+      const open = mobileNav.classList.toggle('open');
+      toggle.textContent = open ? '✕' : '☰';
+    });
+    mobileNav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+      mobileNav.classList.remove('open');
+      toggle.textContent = '☰';
+    }));
+  }
 }
 
 function renderFooter() {

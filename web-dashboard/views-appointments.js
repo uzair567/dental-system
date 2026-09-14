@@ -88,7 +88,8 @@ async function openNewAppointmentModal(onSaved) {
     </form>`, true);
 
   document.getElementById('na-phone').addEventListener('input', async (e) => {
-    const q = e.target.value.trim();
+    const raw = e.target.value.trim();
+    const q = raw.replace(/[\s\-()]/g, ''); // ignore spaces/dashes so formatting differences don't block a match
     const resultBox = document.getElementById('na-patient-result');
     if (q.length < 3) { resultBox.textContent = ''; selectedPatientId = null; return; }
     const results = await api('/patients?q=' + encodeURIComponent(q));
@@ -100,7 +101,7 @@ async function openNewAppointmentModal(onSaved) {
         resultBox.innerHTML = `<span style="color:var(--green);">Selected: ${a.dataset.name}</span>`;
       }));
     } else {
-      resultBox.innerHTML = 'No matching patient — add them first from the Patients page.';
+      resultBox.innerHTML = 'No matching patient for this number — double-check the digits, or add them first from the Patients page.';
     }
   });
 

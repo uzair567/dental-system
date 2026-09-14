@@ -44,9 +44,21 @@ function openInvoiceModal(patientId, onSaved) {
       <div id="iv-items">${items.map((it, i) => row(i, it)).join('')}</div>
       <button type="button" class="btn btn-outline btn-sm" id="iv-add-item">+ Add line item</button>
       <div class="field" style="margin-top:14px;"><label>Discount</label><input type="number" name="discount" value="0" min="0"></div>
+      <div class="field" style="display:flex;align-items:center;gap:8px;margin-top:2px;">
+        <input type="checkbox" id="iv-mark-paid" style="width:auto;">
+        <label for="iv-mark-paid" style="margin:0;font-weight:600;cursor:pointer;">Mark as paid now</label>
+      </div>
+      <div class="field" id="iv-paid-method-field" style="display:none;">
+        <label>Payment method</label>
+        <select id="iv-paid-method"><option value="cash">Cash</option><option value="card">Card</option><option value="bank_transfer">Bank Transfer</option><option value="other">Other</option></select>
+      </div>
       <div class="modal-actions"><button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
         <button type="submit" class="btn btn-primary">Create Invoice</button></div>
     </form>`, true);
+
+  document.getElementById('iv-mark-paid').addEventListener('change', (e) => {
+    document.getElementById('iv-paid-method-field').style.display = e.target.checked ? '' : 'none';
+  });
 
   document.getElementById('iv-add-item').addEventListener('click', () => {
     items.push({ description: '', amount: '' });
@@ -63,8 +75,13 @@ function openInvoiceModal(patientId, onSaved) {
     }).filter(it => it.description && it.amount > 0);
     if (!payloadItems.length) { document.getElementById('iv-msg').innerHTML = '<div class="form-msg err">Add at least one valid line item.</div>'; return; }
     const discount = Number(e.target.discount.value || 0);
+    const markPaid = document.getElementById('iv-mark-paid').checked;
+    const method = document.getElementById('iv-paid-method').value;
     try {
-      await api('/billing/invoices', { method: 'POST', body: JSON.stringify({ patient_id: patientId, items: payloadItems, discount }) });
+      const inv = await api('/billing/invoices', { method: 'POST', body: JSON.stringify({ patient_id: patientId, items: payloadItems, discount }) });
+      if (markPaid && inv.total > 0) {
+        await api('/billing/payments', { method: 'POST', body: JSON.stringify({ invoice_id: inv.id, amount: inv.total, method }) });
+      }
       closeModal(); onSaved && onSaved();
     } catch (err) { document.getElementById('iv-msg').innerHTML = `<div class="form-msg err">${esc(err.message)}</div>`; }
   });

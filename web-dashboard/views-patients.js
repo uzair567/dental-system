@@ -44,7 +44,7 @@ function openAddPatientFlow() {
     <div id="ap-rest" style="margin-top:18px;"></div>
   `);
   document.getElementById('ap-check-btn').addEventListener('click', async () => {
-    const phone = document.getElementById('ap-phone').value.trim();
+    const phone = document.getElementById('ap-phone').value.trim().replace(/[\s\-()]/g, '');
     const msg = document.getElementById('add-patient-msg');
     if (!phone) { msg.innerHTML = '<div class="form-msg err">Enter a phone number first.</div>'; return; }
     try {
@@ -112,22 +112,24 @@ async function openPatientProfile(patientId) {
         <p>${esc(p.patient_code)} · ${esc(p.phone)} ${p.email ? '· ' + esc(p.email) : ''}</p>
       </div>
       <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline btn-sm" id="pp-quick-print-btn" title="Print patient summary">🖨</button>
         <button class="btn btn-outline" id="pp-edit-btn">Edit Info</button>
         <button class="btn btn-primary" id="pp-new-treatment-btn">+ New Treatment</button>
       </div>
     </div>
 
     <div class="tabs">
-      <button class="tab-btn active" data-tab="info">Info</button>
+      <button class="tab-btn" data-tab="info">Info</button>
       <button class="tab-btn" data-tab="appts">Appointments (${data.appointments.length})</button>
       <button class="tab-btn" data-tab="treatments">Treatments (${data.treatments.length})</button>
       <button class="tab-btn" data-tab="chart">Dental Chart</button>
       <button class="tab-btn" data-tab="rx">Prescriptions (${data.prescriptions.length})</button>
       <button class="tab-btn" data-tab="billing">Billing</button>
       <button class="tab-btn" data-tab="docs">Documents (${data.documents.length})</button>
+      <button class="tab-btn active" data-tab="summary">Summary</button>
     </div>
 
-    <div class="tab-pane active" data-pane="info">
+    <div class="tab-pane" data-pane="info">
       <div class="profile-grid">
         <div class="profile-side">
           <div class="card-mini"><h4>Date of birth</h4>${fmtDate(p.dob)}</div>
@@ -203,7 +205,15 @@ async function openPatientProfile(patientId) {
       : '<tr class="empty-row"><td colspan="3">No files uploaded yet.</td></tr>'}</tbody></table>
       </div>
     </div>
+
+    <div class="tab-pane active" data-pane="summary">
+      ${renderPatientSummary(p, data)}
+    </div>
   `;
+
+  main.querySelector('#pp-quick-print-btn').addEventListener('click', () => printPatientSummary(p, data));
+
+  main.querySelector('#pp-print-summary-btn')?.addEventListener('click', () => printPatientSummary(p, data));
 
   main.querySelector('#back-to-patients').addEventListener('click', (e) => { e.preventDefault(); go('patients'); });
   main.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
@@ -322,4 +332,113 @@ function openToothModal(patientId, toothNumber, onSaved) {
     try { await api('/treatments/tooth', { method: 'POST', body: JSON.stringify(body) }); closeModal(); onSaved(); }
     catch (err) { document.getElementById('tooth-msg').innerHTML = `<div class="form-msg err">${esc(err.message)}</div>`; }
   });
+}
+
+// ---------- Patient Summary (rolls up all 7 tabs into one view) ----------
+function renderPatientSummary(p, data) {
+  const totalBilled = data.invoices.reduce((s, i) => s + i.total, 0);
+  const totalPaid = data.invoices.reduce((s, i) => s + i.paid_amount, 0);
+  const outstanding = totalBilled - totalPaid;
+  const lastAppt = data.appointments[0];
+  const nextUpcoming = data.appointments.find(a => ['pending', 'confirmed'].includes(a.status));
+
+  return `
+    <div class="panel-head"><h2 class="mb-0">Patient Summary</h2>
+      <button class="btn btn-outline btn-sm" id="pp-print-summary-btn">🖨 Print Summary</button>
+    </div>
+
+    <div class="stat-grid" style="margin-bottom:18px;">
+      <div class="stat-card"><div class="num">${data.appointments.length}</div><div class="lbl">Appointments</div></div>
+      <div class="stat-card"><div class="num">${data.treatments.length}</div><div class="lbl">Treatments</div></div>
+      <div class="stat-card"><div class="num">${data.prescriptions.length}</div><div class="lbl">Prescriptions</div></div>
+      <div class="stat-card"><div class="num">${fmtMoney(outstanding)}</div><div class="lbl">Outstanding balance</div></div>
+    </div>
+
+    <div class="profile-grid">
+      <div>
+        <div class="panel">
+          <h3>Basic Info</h3>
+          <p class="small"><b>Phone:</b> ${esc(p.phone)} &nbsp; <b>Email:</b> ${esc(p.email || '—')}</p>
+          <p class="small"><b>DOB:</b> ${fmtDate(p.dob)} &nbsp; <b>Gender:</b> ${esc(p.gender || '—')}</p>
+          <p class="small"><b>Address:</b> ${esc(p.address || '—')}</p>
+        </div>
+        <div class="panel">
+          <h3>Medical History &amp; Allergies</h3>
+          <p class="small"><b>History:</b> ${esc(p.medical_history || 'Nothing on file.')}</p>
+          <p class="small"><b>Allergies:</b> ${esc(p.allergies || 'None recorded.')}</p>
+        </div>
+        <div class="panel">
+          <h3>Appointments</h3>
+          ${lastAppt ? `<p class="small">Last visit: <b>${fmtDate(lastAppt.date)}</b> — ${esc(lastAppt.service_name || '—')} (${pill(lastAppt.status)})</p>` : '<p class="small muted">No appointments yet.</p>'}
+          ${nextUpcoming ? `<p class="small">Upcoming: <b>${fmtDate(nextUpcoming.date)} ${nextUpcoming.time}</b> — ${esc(nextUpcoming.service_name || '—')}</p>` : ''}
+        </div>
+      </div>
+      <div>
+        <div class="panel">
+          <h3>Treatments</h3>
+          ${data.treatments.length ? data.treatments.slice(0, 5).map(t => `
+            <p class="small" style="border-bottom:1px solid var(--line);padding:6px 0;">
+              <b>${fmtDate(t.created_at)}</b> — ${esc(t.diagnosis || '—')} · ${esc(t.treatment_performed || '—')} · ${fmtMoney(t.cost)}
+            </p>`).join('') : '<p class="small muted">No treatment records yet.</p>'}
+        </div>
+        <div class="panel">
+          <h3>Prescriptions</h3>
+          ${data.prescriptions.length ? data.prescriptions.slice(0, 5).map(rx => `
+            <p class="small" style="border-bottom:1px solid var(--line);padding:6px 0;">
+              <b>${fmtDate(rx.prescription_date)}</b> — ${rx.items.map(it => esc(it.medicine_name)).join(', ')}
+            </p>`).join('') : '<p class="small muted">No prescriptions yet.</p>'}
+        </div>
+        <div class="panel">
+          <h3>Billing</h3>
+          <p class="small"><b>Total billed:</b> ${fmtMoney(totalBilled)}</p>
+          <p class="small"><b>Total paid:</b> ${fmtMoney(totalPaid)}</p>
+          <p class="small" style="color:${outstanding > 0 ? 'var(--red)' : 'var(--green)'};"><b>Outstanding:</b> ${fmtMoney(outstanding)}</p>
+        </div>
+        <div class="panel">
+          <h3>Documents</h3>
+          <p class="small">${data.documents.length} file(s) uploaded${data.documents.length ? ': ' + data.documents.map(d => esc(d.file_name)).join(', ') : '.'}</p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function printPatientSummary(p, data) {
+  const totalBilled = data.invoices.reduce((s, i) => s + i.total, 0);
+  const totalPaid = data.invoices.reduce((s, i) => s + i.paid_amount, 0);
+  const outstanding = totalBilled - totalPaid;
+
+  const body = `
+    <div class="party">
+      <b>${esc(p.name)}</b> — ${esc(p.patient_code)}
+      <div style="margin-top:4px;">${esc(p.phone)} ${p.email ? '· ' + esc(p.email) : ''}</div>
+    </div>
+    <div class="summary-box">
+      ${data.appointments.length} appointments · ${data.treatments.length} treatments ·
+      ${data.prescriptions.length} prescriptions · Outstanding: ${fmtMoney(outstanding)}
+    </div>
+    <table>
+      <tbody>
+        <tr><td><b>Date of birth</b></td><td>${fmtDate(p.dob)}</td></tr>
+        <tr><td><b>Gender</b></td><td>${esc(p.gender || '—')}</td></tr>
+        <tr><td><b>Address</b></td><td>${esc(p.address || '—')}</td></tr>
+        <tr><td><b>Medical history</b></td><td>${esc(p.medical_history || '—')}</td></tr>
+        <tr><td><b>Allergies</b></td><td>${esc(p.allergies || '—')}</td></tr>
+      </tbody>
+    </table>
+    <h3 style="margin-top:24px;font-size:.95rem;">Treatment History</h3>
+    <table>
+      <thead><tr><th>Date</th><th>Diagnosis</th><th>Treatment</th><th class="right">Cost</th></tr></thead>
+      <tbody>${data.treatments.length ? data.treatments.map(t => `
+        <tr><td>${fmtDate(t.created_at)}</td><td>${esc(t.diagnosis || '—')}</td><td>${esc(t.treatment_performed || '—')}</td><td class="right">${fmtMoney(t.cost)}</td></tr>`).join('')
+      : '<tr><td colspan="4">No treatments recorded.</td></tr>'}</tbody>
+    </table>
+    <h3 style="margin-top:24px;font-size:.95rem;">Billing Summary</h3>
+    <div class="totals">
+      <div><span>Total billed</span><span>${fmtMoney(totalBilled)}</span></div>
+      <div><span>Total paid</span><span>${fmtMoney(totalPaid)}</span></div>
+      <div class="grand"><span>Outstanding</span><span>${fmtMoney(outstanding)}</span></div>
+    </div>
+  `;
+  printDocument('Patient Summary — ' + p.name, body);
 }
